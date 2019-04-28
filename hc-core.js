@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const mqtt = require('mqtt');
+const lz = require('lz-string');
 const HCipher = require('./hcrypto.js');
 const Auth = require('./auth.js');
 const Utilize = require('./utilize');
@@ -29,8 +30,6 @@ var HC = function (serv, self_id, room_id, self_pvk) {
 		client.subscribe(room_id, function (err) {
 			if (!err) {
 				console.log('Listing on channel ' + room_id);
-				// send_plaintxt('fuck', kb0);
-				// send_plainbin(fs.readFileSync('./favicon.ico', 'hex'), kb0, 'test.ico');
 			} else {
 				console.log('! Cannot listen on channel ' + room_id);
 				client.end();
@@ -39,7 +38,7 @@ var HC = function (serv, self_id, room_id, self_pvk) {
 	});
 
 	client.on('message', function (ch, msg) {
-		const sMsg = msg.toString();
+		const sMsg = lz.decompressFromUTF16(msg.toString());
 		// Think how to decide opposite_pbk
 		const plain = en2Plain(sMsg, self_pvk, ut.get_key(room_id, false));
 		if (plain === -1) {
@@ -74,14 +73,14 @@ Auth: ${plain.a}`);
 	this.send_plaintxt = function (plaintxt, opposite_pbk) {
 		const msg = hcp.gen_encryptedMsg(hcp.plainDataPackage(self_id, plaintxt), self_pvk, opposite_pbk, 'utf-8');
 		client.publish(self_id, msg);
-		console.log(`Send ${msg.length/2} bytes.`);
+		console.log(`Send ${msg.length} bytes.`);
 	}
 
 	this.send_plainbin = function (plainBin, opposite_pbk, ext) {
 		const hash = hcp.sha(plainBin, 'md5');
 		const msg = hcp.gen_encryptedMsg(hcp.plainDataPackage(self_id, plainBin, 'hex', hash+ext), self_pvk, opposite_pbk, 'utf-8');
 		client.publish(self_id, msg);
-		console.log(`Send ${msg.length/2} bytes.`);
+		console.log(`Send ${msg.length} bytes.`);
 	}
 }
 

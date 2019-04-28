@@ -8,7 +8,7 @@ var HC = require('./hc-core');
 var HCipher = require('./hcrypto.js');
 var ut = new Utilize();
 
-const msgServer = 'mqtt://srdmobilex.ddns.net';
+const msgServer = 'mqtt://henchat.ml';
 const hcp = new HCipher();
 
 program

@@ -1,0 +1,1 @@
+This folder is used to save public keys of your friends.

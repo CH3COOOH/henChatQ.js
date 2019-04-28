@@ -1,6 +1,7 @@
 'use strict'
 
 const crypto = require('crypto');
+const lz = require('lz-string');
 const Auth = require('./auth.js');
 const auth = new Auth();
 const ALGO_AES = 'aes-256-ctr';
@@ -41,7 +42,8 @@ function HCipher () {
 		const kr = auth.encrypt(pbk_1, k);
 		const hmxr = auth.encrypt(pvk_0, hmx, true);
 
-		return hmxr + kr + mx;
+		return lz.compressToUTF16(hmxr + kr + mx);
+		// return hmxr + kr + mx;
 	}
 
 	// Structure of message:
