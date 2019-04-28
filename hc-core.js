@@ -38,7 +38,7 @@ var HC = function (serv, self_id, room_id, self_pvk) {
 	});
 
 	client.on('message', function (ch, msg) {
-		const sMsg = lz.decompressFromUTF16(msg.toString());
+		const sMsg = lz.decompressFromBase64(msg.toString());
 		// Think how to decide opposite_pbk
 		const plain = en2Plain(sMsg, self_pvk, ut.get_key(room_id, false));
 		if (plain === -1) {

@@ -42,7 +42,7 @@ function HCipher () {
 		const kr = auth.encrypt(pbk_1, k);
 		const hmxr = auth.encrypt(pvk_0, hmx, true);
 
-		return lz.compressToUTF16(hmxr + kr + mx);
+		return lz.compressToBase64(hmxr + kr + mx);
 		// return hmxr + kr + mx;
 	}
 
