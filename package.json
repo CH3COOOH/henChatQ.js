@@ -1,0 +1,32 @@
+{
+  "name": "henchatq",
+  "version": "0.0.1",
+  "description": "A simplified MQTT chat application without a customized server",
+  "main": "henChat-cui.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "commander": "^2.20.0",
+    "lz-string": "^1.4.4",
+    "mqtt": "^2.18.8",
+    "node-rsa": "^1.0.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SiOnOu/henChatQ.js.git"
+  },
+  "keywords": [
+    "henChat"
+  ],
+  "author": "Azuya",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SiOnOu/henChatQ.js/issues"
+  },
+  "homepage": "https://github.com/SiOnOu/henChatQ.js#readme"
+}

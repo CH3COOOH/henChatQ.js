@@ -25,13 +25,16 @@ var en2Plain = function (m, self_pvk, opposite_pbk) {
 var HC = function (serv, self_id, room_id, self_pvk) {
 
 	var client = mqtt.connect(serv);
+	const self_id_hash = hcp.sha(self_id).slice(0, 32);
+	const room_id_hash = hcp.sha(room_id).slice(0, 32);
 
 	client.on('connect', function () {
-		client.subscribe(room_id, function (err) {
+		client.subscribe(room_id_hash, function (err) {
 			if (!err) {
-				console.log('Listing on channel ' + room_id);
+				console.log('Listing on channel ' + room_id_hash);
+				console.log('Channel of self ' + self_id_hash);
 			} else {
-				console.log('! Cannot listen on channel ' + room_id);
+				console.log('! Cannot listen on channel ' + room_id_hash);
 				client.end();
 			}
 		});
@@ -72,14 +75,14 @@ Auth: ${plain.a}`);
 
 	this.send_plaintxt = function (plaintxt, opposite_pbk) {
 		const msg = hcp.gen_encryptedMsg(hcp.plainDataPackage(self_id, plaintxt), self_pvk, opposite_pbk, 'utf-8');
-		client.publish(self_id, msg);
+		client.publish(self_id_hash, msg);
 		console.log(`Send ${msg.length} bytes.`);
 	}
 
 	this.send_plainbin = function (plainBin, opposite_pbk, ext) {
 		const hash = hcp.sha(plainBin, 'md5');
 		const msg = hcp.gen_encryptedMsg(hcp.plainDataPackage(self_id, plainBin, 'hex', hash+ext), self_pvk, opposite_pbk, 'utf-8');
-		client.publish(self_id, msg);
+		client.publish(self_id_hash, msg);
 		console.log(`Send ${msg.length} bytes.`);
 	}
 }
