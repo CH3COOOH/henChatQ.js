@@ -1,3 +1,27 @@
+/*
+MIT License
+
+Copyright (c) 2019 SiOnOu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 'use strict'
 
 const fs = require('fs');
@@ -30,12 +54,13 @@ var send_cmd = function (client, type, content, ch_target, self_id, self_pvk, op
 
 var HC = function (serv, self_id, room_id, self_pvk) {
 
-	var client = mqtt.connect(serv);
-	var client_msg = mqtt.connect(serv);
-	var ch_share = null;
-	const self_id_hash = hcp.sha(self_id).slice(0, 32);
-	const room_id_hash = hcp.sha(room_id).slice(0, 32);
+	var client = mqtt.connect(serv);					// Instance of private channel
+	var client_msg = mqtt.connect(serv);				// Instance of shared channel
+	var ch_share = null;								// Topic of shared channel
+	const self_id_hash = hcp.sha(self_id).slice(0, 32);	// Topic of private channel
+	const room_id_hash = hcp.sha(room_id).slice(0, 32);	// Topic of private channel (friend)
 
+	// Private channel launched
 	client.on('connect', function () {
 		client.subscribe(room_id_hash, function (err) {
 			if (!err) {
@@ -50,10 +75,12 @@ var HC = function (serv, self_id, room_id, self_pvk) {
 		});
 	});
 
+	// Private channel receives commands
 	client.on('message', function (ch, msg) {
 		const sMsg = lz.decompressFromBase64(msg.toString());
-		// Think how to decide opposite_pbk
 		const plain = en2Plain(sMsg, self_pvk, ut.get_key(room_id, false));
+
+		// Invalid or un-decryptable message
 		if (plain === -1) {
 			// console.log('*** Unreadable message');
 			return -1;
@@ -61,13 +88,13 @@ var HC = function (serv, self_id, room_id, self_pvk) {
 		const recv = plain.r;
 		console.log(`
 ===========================
-NEW MESSAGE @ ${ch}
+COMMAND @ ${ch}
 ---------------------------
 From: ${recv.sender}
 Time: ${recv.time}
 Type: ${recv.type}
 Auth: ${plain.a}`);
-// send_cmd = function (type, content, ch_target, self_id, self_pvk, opposite_pbk)
+
 		// Command
 		if (recv.type === 'cmd') {
 			console.log('CMD::' + recv.info);
@@ -77,48 +104,38 @@ Auth: ${plain.a}`);
 				// Receive invitation
 				if (recv.info === 'invitation') {
 					ch_share = recv.payload;
-					client_msg.subscribe(ch_share);
-					send_cmd(client, 'echo', ch_share, self_id_hash, self_id, self_pvk, ut.get_key(recv.sender));
+					client_msg.subscribe(ch_share, function (err) {
+						if (!err) {
+							send_cmd(client, 'echo', ch_share, self_id_hash, self_id, self_pvk, ut.get_key(recv.sender));
+							console.log(`${recv.sender} switched the channel to ${ch_share}`);
+						} else {
+							console.log('! Cannot listen on channel ' + ch_share);
+						}
+					});
+
 				// Receive echo
 				} else if (recv.info === 'echo') {
-					client_msg.subscribe(ch_share);
+					client_msg.subscribe(ch_share, function (err) {
+						if (!err) {
+							console.log(`Channel is switched to ${ch_share}`);
+						} else {
+							console.log('! Cannot listen on channel ' + ch_share);
+						}
+					});
+				} else {
+					console.log('! Unsupported command');
 				}
 			// Auth failed
 			} else {
-				console.log('Ignore invalid command');
+				console.log('! Ignore invalid command');
 			}
-			
-		// Plain text
-		} else if (recv.type === 'utf-8') {
-			console.log('Contant:\n' + recv.payload);
-		
-		// Binary
-		} else if (recv.type === 'hex') {
-			console.log('Info: ' + recv.info);
-			fs.writeFile('./fileRecv/' + recv.info, Buffer.from(recv.payload, 'hex'), function (err) {
-				if (err) {
-					throw err;
-				} else {
-					console.log(`File ${recv.info} is saved.`);
-				}
-			});
+		// Not a command
+		} else {
+			console.log('! Private room only receives control commands');
 		}
 		console.log('===========================');
 		return 0;
 	});
-
-	this.send_plaintxt = function (plaintxt, opposite_pbk) {
-		const msg = hcp.gen_encryptedMsg(hcp.plainDataPackage(self_id, plaintxt), self_pvk, opposite_pbk, 'utf-8');
-		client.publish(ch_share, msg);
-		console.log(`Send ${msg.length} bytes.`);
-	}
-
-	this.send_plainbin = function (plainBin, opposite_pbk, ext) {
-		const hash = hcp.sha(plainBin, 'md5');
-		const msg = hcp.gen_encryptedMsg(hcp.plainDataPackage(self_id, plainBin, 'hex', hash+ext), self_pvk, opposite_pbk, 'utf-8');
-		client.publish(ch_share, msg);
-		console.log(`Send ${msg.length} bytes.`);
-	}
 	
 	client_msg.on('message', function (ch, msg) {
 		const sMsg = lz.decompressFromBase64(msg.toString());
@@ -137,29 +154,9 @@ From: ${recv.sender}
 Time: ${recv.time}
 Type: ${recv.type}
 Auth: ${plain.a}`);
-// send_cmd = function (type, content, ch_target, self_id, self_pvk, opposite_pbk)
-		// Command
-		if (recv.type === 'cmd') {
-			console.log('CMD::' + recv.info);
-			console.log(recv.payload);
-			// Auth passed
-			if (plain.a === true) {
-				// Receive invitation
-				if (recv.info === 'invitation') {
-					ch_share = recv.payload;
-					client_msg.subscribe(ch_share);
-					send_cmd(client, 'echo', ch_share, self_id_hash, self_id, self_pvk, ut.get_key(recv.sender));
-				// Receive echo
-				} else if (recv.info === 'echo') {
-					client_msg.subscribe(ch_share);
-				}
-			// Auth failed
-			} else {
-				console.log('Ignore invalid command');
-			}
-			
+
 		// Plain text
-		} else if (recv.type === 'utf-8') {
+		if (recv.type === 'utf-8') {
 			console.log('Contant:\n' + recv.payload);
 		
 		// Binary
@@ -179,14 +176,14 @@ Auth: ${plain.a}`);
 
 	this.send_plaintxt = function (plaintxt, opposite_pbk) {
 		const msg = hcp.gen_encryptedMsg(hcp.plainDataPackage(self_id, plaintxt), self_pvk, opposite_pbk, 'utf-8');
-		client.publish(ch_share, msg);
+		client_msg.publish(ch_share, msg);
 		console.log(`Send ${msg.length} bytes.`);
 	}
 
 	this.send_plainbin = function (plainBin, opposite_pbk, ext) {
 		const hash = hcp.sha(plainBin, 'md5');
 		const msg = hcp.gen_encryptedMsg(hcp.plainDataPackage(self_id, plainBin, 'hex', hash+ext), self_pvk, opposite_pbk, 'utf-8');
-		client.publish(ch_share, msg);
+		client_msg.publish(ch_share, msg);
 		console.log(`Send ${msg.length} bytes.`);
 	}
 }
