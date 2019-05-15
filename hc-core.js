@@ -67,7 +67,7 @@ var HC = function (serv, self_id, room_id, self_pvk) {
 				console.log('Listing on channel ' + room_id_hash);
 				console.log('Channel of self ' + self_id_hash);
 				ch_share = crypto.randomBytes(32).toString('hex');
-				send_cmd(client, 'invitation', ch_share, self_id_hash, self_id, self_pvk, ut.get_key(room_id, true));
+				send_cmd(client, 'invitation', ch_share, self_id_hash, self_id, self_pvk, ut.get_key(room_id, false));
 			} else {
 				console.log('! Cannot listen on channel ' + room_id_hash);
 				client.end();
@@ -106,7 +106,7 @@ Auth: ${plain.a}`);
 					ch_share = recv.payload;
 					client_msg.subscribe(ch_share, function (err) {
 						if (!err) {
-							send_cmd(client, 'echo', ch_share, self_id_hash, self_id, self_pvk, ut.get_key(recv.sender));
+							send_cmd(client, 'echo', ch_share, self_id_hash, self_id, self_pvk, ut.get_key(recv.sender, false));
 							console.log(`${recv.sender} switched the channel to ${ch_share}`);
 						} else {
 							console.log('! Cannot listen on channel ' + ch_share);

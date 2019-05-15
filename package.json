@@ -1,8 +1,8 @@
 {
-  "name": "henchatq",
-  "version": "0.0.1",
-  "description": "A simplified MQTT chat application without a customized server",
-  "main": "henChat-cui.js",
+  "name": "hc-core",
+  "version": "1.0.0",
+  "description": "Core of henChatQ, a MQTT based secure IM system",
+  "main": "hc-core.js",
   "directories": {
     "test": "test"
   },
@@ -21,10 +21,10 @@
     "url": "git+https://github.com/SiOnOu/henChatQ.js.git"
   },
   "keywords": [
-    "henChat"
+    "mqtt"
   ],
-  "author": "Azuya",
-  "license": "ISC",
+  "author": "SiOnOu",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/SiOnOu/henChatQ.js/issues"
   },
